@@ -34,7 +34,7 @@ public class SSServerUdpProxyHandler extends SimpleChannelInboundHandler<ByteBuf
         proxy(clientSender, clientRecipient, clientCtx, msg.retain());
     }
 
-    private void proxy(InetSocketAddress clientSender, InetSocketAddress clientRecipient, ChannelHandlerContext clientCtx, ByteBuf msg) {
+    private void proxy(final InetSocketAddress clientSender, final InetSocketAddress clientRecipient, final ChannelHandlerContext clientCtx, ByteBuf msg) {
         Channel pc = NatMapper.getUdpChannel(clientSender);
         if (pc == null) {
             Bootstrap bootstrap = new Bootstrap();

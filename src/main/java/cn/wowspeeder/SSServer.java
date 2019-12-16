@@ -49,7 +49,7 @@ public class SSServer {
         }
     }
 
-    private void startSingle(String server, Integer port, String password, String method, String obfs, String obfsparam) throws Exception {
+    private void startSingle(String server, Integer port, final String password, final String method, final String obfs, String obfsparam) throws Exception {
         ServerBootstrap tcpBootstrap = new ServerBootstrap();
         tcpBootstrap.group(bossGroup, workerGroup).channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_BACKLOG, 5120)
@@ -59,7 +59,7 @@ public class SSServer {
                 .childOption(ChannelOption.SO_LINGER, 1) //关闭时等待1s发送关闭
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
                     @Override
-                    protected void initChannel(NioSocketChannel ctx) throws Exception {
+                    protected void initChannel(final NioSocketChannel ctx) throws Exception {
 //                            ctx.pipeline().addLast(new SSTcpHandler(config));
                         logger.debug("channel initializer");
 

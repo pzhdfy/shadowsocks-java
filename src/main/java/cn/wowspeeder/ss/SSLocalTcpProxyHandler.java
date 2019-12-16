@@ -116,31 +116,56 @@ public class SSLocalTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf>
             try {
                 proxyClient
                         .connect(ssServer)
-                        .addListener((ChannelFutureListener) future -> {
-                            try {
-                                if (future.isSuccess()) {
-                                    logger.debug("channel id {}, {}<->{}<->{} connect  {}", clientChannel.id().toString(), clientChannel.remoteAddress().toString(), future.channel().localAddress().toString(), ssServer.toString(), future.isSuccess());
-                                    remoteChannel = future.channel();
-                                    //write addr
-                                    SSAddrRequest ssAddr = new SSAddrRequest(SocksAddressType.valueOf(this.remoteAddr.dstAddrType().byteValue()), this.remoteAddr.dstAddr(), this.remoteAddr.dstPort());
-                                    ByteBuf addrBuff = Unpooled.buffer(128);
-                                    ssAddr.encodeAsByteBuf(addrBuff);
-                                    remoteChannel.writeAndFlush(addrBuff);
+                        .addListener(new ChannelFutureListener()
+                        {
+                            @Override
+                            public void operationComplete(ChannelFuture future)
+                            {
+                                try {
+                                    if (future.isSuccess()) {
+                                        logger.debug(
+                                            "channel id {}, {}<->{}<->{} connect  {}",
+                                            clientChannel.id().toString(),
+                                            clientChannel.remoteAddress().toString(),
+                                            future.channel().localAddress().toString(),
+                                            ssServer.toString(),
+                                            future.isSuccess()
+                                        );
+                                        remoteChannel = future.channel();
+                                        //write addr
+                                        SSAddrRequest ssAddr = new SSAddrRequest(
+                                            SocksAddressType.valueOf(remoteAddr.dstAddrType()
+                                                                                    .byteValue()),
+                                            remoteAddr.dstAddr(),
+                                            remoteAddr.dstPort()
+                                        );
+                                        ByteBuf addrBuff = Unpooled.buffer(128);
+                                        ssAddr.encodeAsByteBuf(addrBuff);
+                                        remoteChannel.writeAndFlush(addrBuff);
 
-                                    //write remaining bufs
-                                    if (clientBuffs != null) {
-                                        ListIterator<ByteBuf> bufsIterator = clientBuffs.listIterator();
-                                        while (bufsIterator.hasNext()) {
-                                            remoteChannel.writeAndFlush(bufsIterator.next().retain());
+                                        //write remaining bufs
+                                        if (clientBuffs != null) {
+                                            ListIterator<ByteBuf> bufsIterator = clientBuffs.listIterator();
+                                            while (bufsIterator.hasNext()) {
+                                                remoteChannel.writeAndFlush(bufsIterator.next().retain());
+                                            }
+                                            clientBuffs = null;
                                         }
-                                        clientBuffs = null;
+                                    } else {
+                                        logger.error(
+                                            "channel id {}, {}<->{} connect {},cause {}",
+                                            clientChannel.id().toString(),
+                                            clientChannel.remoteAddress().toString(),
+                                            ssServer.toString(),
+                                            future.isSuccess(),
+                                            future.cause()
+                                        );
+                                        proxyChannelClose();
                                     }
-                                } else {
-                                    logger.error("channel id {}, {}<->{} connect {},cause {}", clientChannel.id().toString(), clientChannel.remoteAddress().toString(), ssServer.toString(), future.isSuccess(), future.cause());
+                                }
+                                catch (Exception e) {
                                     proxyChannelClose();
                                 }
-                            } catch (Exception e) {
-                                proxyChannelClose();
                             }
                         });
             } catch (Exception e) {
@@ -183,7 +208,9 @@ public class SSLocalTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf>
 //        logger.info("proxyChannelClose");
         try {
             if (clientBuffs != null) {
-                clientBuffs.forEach(ReferenceCountUtil::release);
+                for(ByteBuf byteBuf:clientBuffs) {
+                    ReferenceCountUtil.release(byteBuf);
+                }
                 clientBuffs = null;
             }
             if (remoteChannel != null) {

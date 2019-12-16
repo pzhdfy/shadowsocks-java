@@ -28,30 +28,41 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
         if (message instanceof Socks5CommandRequest) {
             final Socks5CommandRequest request = (Socks5CommandRequest) message;
             Promise<Channel> promise = ctx.executor().newPromise();
-            promise.addListener(
-                    (FutureListener<Channel>) future -> {
-                        final Channel outboundChannel = future.getNow();
-                        if (future.isSuccess()) {
-                            ChannelFuture responseFuture =
-                                    ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
-                                            Socks5CommandStatus.SUCCESS,
-                                            request.dstAddrType(),
-                                            request.dstAddr(),
-                                            request.dstPort()));
+            promise.addListener(new FutureListener<Channel>()
+            {
+                @Override
+                public void operationComplete(Future<Channel> future)
 
-                            responseFuture.addListener((ChannelFutureListener) channelFuture -> {
+                {
+                    final Channel outboundChannel = future.getNow();
+                    if (future.isSuccess()) {
+                        ChannelFuture responseFuture =
+                            ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
+                                Socks5CommandStatus.SUCCESS,
+                                request.dstAddrType(),
+                                request.dstAddr(),
+                                request.dstPort()
+                            ));
+
+                        responseFuture.addListener(new ChannelFutureListener()
+                        {
+                            @Override
+                            public void operationComplete(ChannelFuture future)
+                            {
                                 ctx.pipeline().remove(SocksServerConnectHandler.this);
                                 // src <- des
                                 outboundChannel.pipeline().addLast(new RelayHandler(ctx.channel()));
                                 // src -> des
                                 ctx.pipeline().addLast(new RelayHandler(outboundChannel));
-                            });
-                        } else {
-                            ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
-                                    Socks5CommandStatus.FAILURE, request.dstAddrType()));
-                            SocksServerUtils.closeOnFlush(ctx.channel());
-                        }
-                    });
+                            }
+                        });
+                    } else {
+                        ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
+                            Socks5CommandStatus.FAILURE, request.dstAddrType()));
+                        SocksServerUtils.closeOnFlush(ctx.channel());
+                    }
+                }
+            });
 
 
 

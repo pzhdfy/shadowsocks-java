@@ -53,7 +53,7 @@ public class SSLocal {
         }
     }
 
-    private void startSingle(String socks5Server, Integer socks5Port, String server, Integer port, String password, String method, String obfs, String obfsparam) throws Exception {
+    private void startSingle(String socks5Server, Integer socks5Port, final String server, final Integer port, final String password, final String method, final String obfs, final String obfsparam) throws Exception {
         ServerBootstrap tcpBootstrap = new ServerBootstrap();
 
         //local socks5  server ,tcp
@@ -63,7 +63,7 @@ public class SSLocal {
                 .childHandler(new ChannelInitializer<NioSocketChannel>() {
 
                     @Override
-                    protected void initChannel(NioSocketChannel ctx) throws Exception {
+                    protected void initChannel(final NioSocketChannel ctx) throws Exception {
                         logger.debug("channel initializer");
                         ctx.pipeline()
                                 //timeout

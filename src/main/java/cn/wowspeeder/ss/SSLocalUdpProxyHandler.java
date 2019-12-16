@@ -46,7 +46,7 @@ public class SSLocalUdpProxyHandler extends SimpleChannelInboundHandler<Datagram
         proxy(clientSender, msg.content(), clientRecipient, clientCtx);
     }
 
-    private void proxy(InetSocketAddress clientSender, ByteBuf msg, InetSocketAddress clientRecipient, ChannelHandlerContext clientCtx) throws InterruptedException {
+    private void proxy(final InetSocketAddress clientSender, ByteBuf msg, InetSocketAddress clientRecipient, final ChannelHandlerContext clientCtx) throws InterruptedException {
         Channel pc = NatMapper.getUdpChannel(clientSender);
         if (pc == null) {
             Bootstrap bootstrap = new Bootstrap();
@@ -93,14 +93,18 @@ public class SSLocalUdpProxyHandler extends SimpleChannelInboundHandler<Datagram
             ;
             try {
                 pc = bootstrap
-                        .bind(0)
-                        .addListener((ChannelFutureListener) future -> {
+                    .bind(0)
+                    .addListener(new ChannelFutureListener(){
+                        @Override
+                        public void operationComplete(ChannelFuture future)
+                        {
                             if (future.isSuccess()) {
                                 NatMapper.putUdpChannel(clientSender, future.channel());
                             }
-                        })
-                        .sync()
-                        .channel();
+                        }
+                    })
+                    .sync()
+                    .channel();
             } catch (Exception e) {
                 logger.error("connect intenet error", e);
                 return;

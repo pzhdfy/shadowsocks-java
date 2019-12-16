@@ -44,7 +44,7 @@ public class SSServerTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf
         if (remoteChannel == null && proxyClient == null) {
             proxyClient = new Bootstrap();//
 
-            InetSocketAddress clientRecipient = clientChannel.attr(SSCommon.REMOTE_DES).get();
+            final InetSocketAddress clientRecipient = clientChannel.attr(SSCommon.REMOTE_DES).get();
 
             proxyClient.group(clientChannel.eventLoop()).channel(NioSocketChannel.class)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 60 * 1000)
@@ -93,7 +93,9 @@ public class SSServerTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf
             try {
                 proxyClient
                         .connect(clientRecipient)
-                        .addListener((ChannelFutureListener) future -> {
+                        .addListener(new ChannelFutureListener(){
+                            @Override
+                            public void operationComplete(ChannelFuture future){
                             try {
                                 if (future.isSuccess()) {
                                     logger.debug("channel id {}, {}<->{}<->{} connect  {}", clientChannel.id().toString(), clientChannel.remoteAddress().toString(), future.channel().localAddress().toString(), clientRecipient.toString(), future.isSuccess());
@@ -112,6 +114,7 @@ public class SSServerTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf
                             } catch (Exception e) {
                                 proxyChannelClose();
                             }
+                        }
                         });
             } catch (Exception e) {
                 logger.error("connect internet error", e);
@@ -153,7 +156,10 @@ public class SSServerTcpProxyHandler extends SimpleChannelInboundHandler<ByteBuf
 //        logger.info("proxyChannelClose");
         try {
             if (clientBuffs != null) {
-                clientBuffs.forEach(ReferenceCountUtil::release);
+                for(ByteBuf byteBuf:clientBuffs) {
+                    ReferenceCountUtil.release(byteBuf);
+                }
+                //clientBuffs.forEach(ReferenceCountUtil::release);
                 clientBuffs = null;
             }
             if (remoteChannel != null) {
